@@ -33,31 +33,3 @@ impl Zobrist {
         h
     }
 }
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-    #[test]
-    fn test_hash() {
-        let z = Zobrist::new(2);
-        let h = z.hash(&vec![
-            vec![
-                Square::Empty,
-                Square::from(Player::X),
-                Square::from(Player::O),
-            ],
-            vec![
-                Square::Empty,
-                Square::from(Player::X),
-                Square::from(Player::O),
-            ],
-            vec![
-                Square::Empty,
-                Square::from(Player::X),
-                Square::from(Player::O),
-            ],
-        ]);
-        println!("{:?}", z.table);
-        println!("{}", h);
-    }
-}
