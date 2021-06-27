@@ -4,10 +4,11 @@ use std::io::Write;
 use tictactoe::game::{Player, Square, TicTacToe};
 
 fn main() {
-    let mut game = TicTacToe::new(3);
+    let mut game = TicTacToe::new(4);
     loop {
         println!("Computer's turn...");
-        if let (_, Some((r, c))) = game.negamax(Player::X, -2, 2) {
+        if let (_, Some((r, c))) = game.negamax(Player::X, i32::MIN, i32::MAX) {
+            println!("Computer chose {:?}", (r, c));
             game.board[r][c] = Square::from(Player::X);
             println!("{}", game);
             if game.is_winner(Player::X) {

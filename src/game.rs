@@ -1,4 +1,7 @@
+use crate::zobrist::Zobrist;
+use itertools::iproduct;
 use std::cmp;
+use std::collections::HashMap;
 use std::fmt;
 
 #[derive(Debug, Copy, Clone, PartialEq)]
@@ -8,7 +11,7 @@ pub enum Player {
 }
 
 impl Player {
-    pub fn opponent(self) -> Player {
+    pub fn opponent(self) -> Self {
         match self {
             Player::O => Player::X,
             Player::X => Player::O,
@@ -28,18 +31,24 @@ impl From<Player> for Square {
     }
 }
 
+pub type Move = (usize, usize);
+pub type Result = (i32, Option<Move>);
+pub type Board = Vec<Vec<Square>>;
+
 pub struct TicTacToe {
-    pub board: Vec<Vec<Square>>,
+    pub board: Board,
     pub dim: usize,
+    zobrist: Zobrist,
+    transpose: HashMap<u64, Result>,
 }
 
-type Move = (usize, usize);
-
 impl TicTacToe {
-    pub fn new(dim: usize) -> TicTacToe {
+    pub fn new(dim: usize) -> Self {
         TicTacToe {
-            board: vec![vec![Square::Empty; dim]; dim],
             dim,
+            board: vec![vec![Square::Empty; dim]; dim],
+            zobrist: Zobrist::new(dim),
+            transpose: HashMap::new(),
         }
     }
 
@@ -61,7 +70,12 @@ impl TicTacToe {
         self.board.iter().flatten().all(|x| *x != Square::Empty)
     }
 
-    pub fn negamax(&mut self, p: Player, mut alpha: i32, beta: i32) -> (i32, Option<Move>) {
+    pub fn negamax(&mut self, p: Player, mut alpha: i32, beta: i32) -> Result {
+        let h = self.zobrist.hash(&self.board);
+        if let Some(res) = self.transpose.get(&h) {
+            return *res;
+        }
+
         if self.is_winner(p) {
             return (1, None);
         } else if self.is_winner(p.opponent()) {
@@ -72,23 +86,23 @@ impl TicTacToe {
 
         let mut ret = (i32::MIN, None);
 
-        for r in 0..self.dim {
-            for c in 0..self.dim {
-                if self.board[r][c] != Square::Empty {
-                    continue;
-                }
+        for (r, c) in iproduct!(0..self.dim, 0..self.dim) {
+            if self.board[r][c] != Square::Empty {
+                continue;
+            }
 
-                self.board[r][c] = Square::from(p);
-                let (v, _) = self.negamax(p.opponent(), alpha, beta);
-                self.board[r][c] = Square::Empty;
+            self.board[r][c] = Square::from(p);
+            let (v, _) = self.negamax(p.opponent(), alpha, beta);
+            self.board[r][c] = Square::Empty;
 
-                ret = cmp::max(ret, (-v, Some((r, c))));
-                alpha = cmp::max(alpha, ret.0);
-                if alpha >= beta {
-                    return ret;
-                }
+            ret = cmp::max(ret, (-v, Some((r, c))));
+            alpha = cmp::max(alpha, ret.0);
+            if alpha >= beta {
+                break;
             }
         }
+
+        self.transpose.insert(h, ret);
 
         ret
     }
